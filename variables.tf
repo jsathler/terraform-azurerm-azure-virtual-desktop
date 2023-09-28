@@ -125,6 +125,108 @@ variable "host_pool" {
   }
 }
 
+variable "scaling_plan" {
+  description = <<DESCRIPTION
+  - name:                                   (required) The name which should be used for this Virtual Desktop Scaling Plan 
+  - enabled:                                (optional) Specifies if the scaling plan is enabled or disabled for the HostPool
+  - friendly_name:                          (optional) Friendly name of the Scaling Plan
+  - description:                            (optional) A description of the Scaling Plan
+  - timezone:                               (optional) Specifies the Time Zone which should be used by the Scaling Plan for time based events. Defaults to UTC
+  - exclusion_tag:                          (optional) he name of the tag associated with the VMs you want to exclude from autoscaling
+  - schedule:                               (required) A block as defined bellow
+    - days_of_week:                         (optional) A list of Days of the Week on which this schedule will be used. Defaults to '["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]'
+    - off_peak_start_time:                  (optional) The time at which Off-Peak scaling will begin. This is also the end-time for the Ramp-Down period. Defaults to 20:00
+    - off_peak_load_balancing_algorithm:    (optional) The load Balancing Algorithm to use during Off-Peak Hours. Possible values are DepthFirst and BreadthFirst. Defaults to DepthFirst
+    - peak_start_time:                      (optional) The time at which Peak scaling will begin. This is also the end-time for the Ramp-Up period. Defaults to 09:00
+    - peak_load_balancing_algorithm:        (optional) The load Balancing Algorithm to use during Peak Hours. Possible values are DepthFirst and BreadthFirst. Defaults to DepthFirst
+    - ramp_up_capacity_threshold_percent:   (optional) This is the value of percentage of used host pool capacity that will be considered to evaluate whether to turn on/off virtual machines during the ramp-up and peak hours. Defaults to 60
+    - ramp_up_load_balancing_algorithm:     (optional) The load Balancing Algorithm to use during the Ramp-Up period. Possible values are DepthFirst and BreadthFirst.Defaults to BreadthFirst
+    - ramp_up_start_time:                   (optional) The time at which Ramp-Up scaling will begin. This is also the end-time for the Ramp-Up period. Defaults to 08:00
+    - ramp_up_minimum_hosts_percent:        (optional) Specifies the minimum percentage of session host virtual machines to start during ramp-up for peak hours. Defauls to 20
+    - ramp_down_capacity_threshold_percent: (optional) This is the value in percentage of used host pool capacity that will be considered to evaluate whether to turn on/off virtual machines during the ramp-down and off-peak hours. Defaults to 90
+    - ramp_down_force_logoff_users:         (optional) Whether users will be forced to log-off session hosts once the ramp_down_wait_time_minutes value has been exceeded during the Ramp-Down period. Defaults to true
+    - ramp_down_load_balancing_algorithm:   (optional) The load Balancing Algorithm to use during the Ramp-Down period. Possible values are DepthFirst and BreadthFirst. Defaults to DepthFirst
+    - ramp_down_minimum_hosts_percent:      (optional) The minimum percentage of session host virtual machines that you would like to get to for ramp-down and off-peak hours. Defaults to 10
+    - ramp_down_notification_message:       (optional) The notification message to send to users during Ramp-Down period when they are required to log-off. Defaults to "You will be logged off in 30 min. Make sure to save your work."
+    - ramp_down_start_time:                 (optional) The time at which Ramp-Down scaling will begin. This is also the end-time for the Ramp-Up period. Defaults to 18:00
+    - ramp_down_stop_hosts_when:            (optional) Controls Session Host shutdown behaviour during Ramp-Down period. Session Hosts can either be shutdown when all sessions on the Session Host have ended, or when there are no Active sessions left on the Session Host. Possible values are ZeroSessions and ZeroActiveSessions. Default to ZeroSessions
+    - ramp_down_wait_time_minutes:          (optional) The number of minutes during Ramp-Down period that autoscale will wait after setting the session host VMs to drain mode, notifying any currently signed in users to save their work before forcing the users to logoff. Defaults to 30
+
+  DESCRIPTION
+  type = object({
+    name          = string
+    enabled       = optional(bool, true)
+    friendly_name = optional(string, null)
+    description   = optional(string, null)
+    timezone      = optional(string, "UTC")
+    exclusion_tag = optional(string, null)
+    schedule = map(object({
+      days_of_week                         = optional(list(string), ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"])
+      off_peak_start_time                  = optional(string, "20:00")
+      off_peak_load_balancing_algorithm    = optional(string, "DepthFirst")
+      peak_start_time                      = optional(string, "09:00")
+      peak_load_balancing_algorithm        = optional(string, "DepthFirst")
+      ramp_up_capacity_threshold_percent   = optional(number, 60)
+      ramp_up_load_balancing_algorithm     = optional(string, "BreadthFirst")
+      ramp_up_start_time                   = optional(string, "08:00")
+      ramp_up_minimum_hosts_percent        = optional(number, 20)
+      ramp_down_capacity_threshold_percent = optional(number, 90)
+      ramp_down_force_logoff_users         = optional(bool, true)
+      ramp_down_load_balancing_algorithm   = optional(string, "DepthFirst")
+      ramp_down_minimum_hosts_percent      = optional(number, 10)
+      ramp_down_notification_message       = optional(string, "You will be logged off in 30 min. Make sure to save your work.")
+      ramp_down_start_time                 = optional(string, "18:00")
+      ramp_down_stop_hosts_when            = optional(string, "ZeroSessions")
+      ramp_down_wait_time_minutes          = optional(number, 30)
+    }))
+  })
+
+  default = null
+
+  validation {
+    condition = var.scaling_plan == null ? true : alltrue([for schedule in var.scaling_plan.schedule :
+      can([for weekday in schedule.days_of_week : index(["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Satuday"], weekday) >= 0])
+    ])
+    error_message = "Valid values for days_of_week are Sunday, Monday, Tuesday, Wednesday, Thursday, Friday and Satuday."
+  }
+
+  validation {
+    condition = var.scaling_plan == null ? true : alltrue([for schedule in var.scaling_plan.schedule :
+      can(index(["BreadthFirst", "DepthFirst"], schedule.off_peak_load_balancing_algorithm) >= 0) &&
+      can(index(["BreadthFirst", "DepthFirst"], schedule.peak_load_balancing_algorithm) >= 0) &&
+      can(index(["BreadthFirst", "DepthFirst"], schedule.ramp_up_load_balancing_algorithm) >= 0) &&
+      can(index(["BreadthFirst", "DepthFirst"], schedule.ramp_down_load_balancing_algorithm) >= 0)
+    ])
+    error_message = "Valid values for off_peak_load_balancing_algorithm, peak_load_balancing_algorithm, ramp_up_load_balancing_algorithm and ramp_down_load_balancing_algorithm are BreadthFirst and DepthFirst."
+  }
+
+  validation {
+    condition = var.scaling_plan == null ? true : alltrue([for schedule in var.scaling_plan.schedule :
+      can(regex("^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$", schedule.off_peak_start_time)) &&
+      can(regex("^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$", schedule.peak_start_time)) &&
+      can(regex("^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$", schedule.ramp_up_start_time)) &&
+      can(regex("^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$", schedule.ramp_down_start_time))
+    ])
+    error_message = "off_peak_start_time, peak_start_time, ramp_up_start_time and ramp_down_start_time should be in format HH:MM (00:00 - 23:59)"
+  }
+
+  validation {
+    condition = var.scaling_plan == null ? true : alltrue([for schedule in var.scaling_plan.schedule :
+      (schedule.ramp_up_capacity_threshold_percent >= 0 && schedule.ramp_up_capacity_threshold_percent <= 100) &&
+      (schedule.ramp_up_minimum_hosts_percent >= 0 && schedule.ramp_up_minimum_hosts_percent <= 100) &&
+      (schedule.ramp_down_capacity_threshold_percent >= 0 && schedule.ramp_down_capacity_threshold_percent <= 100) &&
+      (schedule.ramp_down_minimum_hosts_percent >= 0 && schedule.ramp_down_minimum_hosts_percent <= 100)
+    ])
+    error_message = "Valid values for ramp_up_capacity_threshold_percent, ramp_up_minimum_hosts_percent, ramp_down_capacity_threshold_percent and ramp_down_minimum_hosts_percent are between 1 and 100"
+  }
+
+  validation {
+    condition     = var.scaling_plan == null ? true : alltrue([for schedule in var.scaling_plan.schedule : can(index(["ZeroActiveSessions", "ZeroSessions"], schedule.ramp_down_stop_hosts_when) >= 0)])
+    error_message = "Valid values for ramp_down_stop_hosts_when are ZeroActiveSessions and ZeroSessions."
+  }
+
+}
+
 variable "application_groups" {
   description = <<DESCRIPTION
   Application Groups parameters. This parameter is required'
@@ -174,5 +276,23 @@ variable "application_groups" {
   validation {
     condition     = alltrue([for app in var.application_groups : app.applications != null if app.type == "RemoteApp"])
     error_message = "If type is RemoteApp, applications shoud be set."
+  }
+}
+
+output "validate_application_groups" {
+  value = null
+
+  precondition {
+    condition     = var.host_pool.type == "Personal" ? length(var.application_groups) <= 1 : true
+    error_message = "If host pool type is Personal, You can have only one application group."
+  }
+}
+
+output "validate_scaling_plan" {
+  value = null
+
+  precondition {
+    condition     = var.host_pool.type == "Personal" ? var.scaling_plan == null : true
+    error_message = "Currently Terraform does not support creating scaling plan of type Personal."
   }
 }

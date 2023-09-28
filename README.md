@@ -8,7 +8,9 @@ These types of resources are supported:
 * [Azure Virtual Desktop Host Pools](https://learn.microsoft.com/en-us/azure/virtual-desktop/terminology#host-pools)
 * [Azure Virtual Desktop Application Groups](https://learn.microsoft.com/en-us/azure/virtual-desktop/terminology#application-groups)
 * [Azure Virtual Desktop Workspaces](https://learn.microsoft.com/en-us/azure/virtual-desktop/terminology#workspaces)
+* [Azure Virtual Desktop Scaling Plan*](https://learn.microsoft.com/en-us/azure/virtual-desktop/autoscale-scenarios#how-a-scaling-plan-works)
 * [Azure RBAC](https://learn.microsoft.com/en-us/azure/role-based-access-control/overview)
+* [Azure AD-joined virtual machines in Azure Virtual Desktop](https://learn.microsoft.com/en-us/azure/virtual-desktop/azure-ad-joined-session-hosts)
 
 ## Terraform versions
 
@@ -16,24 +18,16 @@ Terraform 1.5.6 and newer.
 
 ## Roadmap
  * [FSLogix profile containers](https://learn.microsoft.com/en-us/azure/virtual-desktop/fslogix-containers-azure-files)
- * [Azure Virtual Desktop Scaling Plan](https://learn.microsoft.com/en-us/azure/virtual-desktop/autoscale-scaling-plan?tabs=pooled-autoscale)
+ 
+## Notes
 
-## Known issues
-Terraform does not allow using values derived from resource attributes that cannot be determined until apply as key in "for_each", if we try to use it the following error is shown:
-
-  The "for_each" set includes values derived from resource attributes that cannot be determined until apply, and so Terraform cannot determine the full set of keys that will identify the instances of this
-
-Because we use the principal_id as part of keys in this module, all principals (users and/or groups) should be created before running this module.
-
-To bypass this situation on provided examples, execute the "terraform apply -target" to first create the Azure AD groups and them execute the terraform apply
-  
-  terraform apply -target="azuread_group.desktop_users" -target="azuread_group.app_users" -target="azuread_group.admins"
+* Currently terraform only support creating scaling plan for Pooled Host Pool type (https://github.com/hashicorp/terraform-provider-azurerm/issues/22601)
 
 ## Usage
 
 ```hcl
 module "avd" {
-  source              = "../../"
+  source              = "jsathler/azure-virtual-desktop/azurerm"
   location            = azurerm_resource_group.default.location
   resource_group_name = azurerm_resource_group.default.name
 

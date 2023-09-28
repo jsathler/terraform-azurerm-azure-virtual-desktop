@@ -35,7 +35,7 @@ resource "random_password" "default" {
 module "sessionhosts" {
   for_each             = toset(local.session_hosts)
   source               = "jsathler/virtualmachine/azurerm"
-  version              = "0.1.0"
+  version              = "0.1.1"
   name                 = each.key
   location             = azurerm_resource_group.default.location
   resource_group_name  = azurerm_resource_group.default.name
@@ -95,7 +95,7 @@ module "avd" {
     name                  = "avdpooled-example"
     friendly_name         = "AVD Pooled Pool"
     session_host_ids      = { for vm in module.sessionhosts : vm.name => vm.id }
-    custom_rdp_properties = "targetisaadjoined:i:1"
+    custom_rdp_properties = "targetisaadjoined:i:1;"
     aadjoin               = true
     aad_scope_id          = azurerm_resource_group.default.id
     validate_environment  = true
@@ -126,6 +126,10 @@ module "avd" {
         }
       }
     }
+  }
+  scaling_plan = {
+    name     = "avdpooled-example"
+    schedule = { weekdays = {} }
   }
 }
 

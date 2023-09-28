@@ -49,6 +49,58 @@ resource "azurerm_virtual_desktop_host_pool_registration_info" "default" {
   expiration_date = timeadd(time_static.default.rfc3339, "24h")
 }
 
+data "azuread_service_principal" "scaling_plan" {
+  count          = var.scaling_plan != null && var.host_pool.type == "Pooled" ? 1 : 0
+  application_id = "9cdead84-a844-4324-93f2-b2e6bb768d07"
+}
+
+resource "azurerm_role_assignment" "scaling_plan" {
+  count                = var.scaling_plan != null && var.host_pool.type == "Pooled" ? 1 : 0
+  scope                = azurerm_virtual_desktop_host_pool.default.id
+  role_definition_name = "Desktop Virtualization Power On Off Contributor"
+  principal_id         = data.azuread_service_principal.scaling_plan[0].id
+}
+
+resource "azurerm_virtual_desktop_scaling_plan" "default" {
+  count               = var.scaling_plan != null && var.host_pool.type == "Pooled" ? 1 : 0
+  name                = "${var.scaling_plan.name}-vdscaling"
+  friendly_name       = var.scaling_plan.friendly_name
+  description         = var.scaling_plan.description
+  location            = var.location
+  resource_group_name = var.resource_group_name
+  time_zone           = var.scaling_plan.timezone
+  tags                = local.tags
+
+  dynamic "schedule" {
+    for_each = { for key, value in var.scaling_plan.schedule : key => value }
+    content {
+      name                                 = schedule.key
+      days_of_week                         = schedule.value.days_of_week
+      off_peak_start_time                  = schedule.value.off_peak_start_time
+      off_peak_load_balancing_algorithm    = schedule.value.off_peak_load_balancing_algorithm
+      peak_start_time                      = schedule.value.peak_start_time
+      peak_load_balancing_algorithm        = schedule.value.peak_load_balancing_algorithm
+      ramp_up_capacity_threshold_percent   = schedule.value.ramp_up_capacity_threshold_percent
+      ramp_up_load_balancing_algorithm     = schedule.value.ramp_up_load_balancing_algorithm
+      ramp_up_start_time                   = schedule.value.ramp_up_start_time
+      ramp_up_minimum_hosts_percent        = schedule.value.ramp_up_minimum_hosts_percent
+      ramp_down_capacity_threshold_percent = schedule.value.ramp_down_capacity_threshold_percent
+      ramp_down_force_logoff_users         = schedule.value.ramp_down_force_logoff_users
+      ramp_down_load_balancing_algorithm   = schedule.value.ramp_down_load_balancing_algorithm
+      ramp_down_minimum_hosts_percent      = schedule.value.ramp_down_minimum_hosts_percent
+      ramp_down_notification_message       = schedule.value.ramp_down_notification_message
+      ramp_down_start_time                 = schedule.value.ramp_down_start_time
+      ramp_down_stop_hosts_when            = schedule.value.ramp_down_stop_hosts_when
+      ramp_down_wait_time_minutes          = schedule.value.ramp_down_wait_time_minutes
+    }
+  }
+
+  host_pool {
+    hostpool_id          = azurerm_virtual_desktop_host_pool.default.id
+    scaling_plan_enabled = var.scaling_plan.enabled
+  }
+}
+
 ############################################################################################################
 # Workspace
 ############################################################################################################
