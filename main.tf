@@ -46,7 +46,7 @@ resource "time_static" "default" {
 #Creates the token that will be used by VMs to register to this pool
 resource "azurerm_virtual_desktop_host_pool_registration_info" "default" {
   hostpool_id     = azurerm_virtual_desktop_host_pool.default.id
-  expiration_date = timeadd(time_static.default.rfc3339, "24h")
+  expiration_date = timeadd(time_static.default.rfc3339, "696h")
 }
 
 data "azuread_service_principal" "scaling_plan" {
@@ -220,6 +220,7 @@ resource "azurerm_virtual_machine_extension" "AVDDsc" {
   type                       = "DSC"
   type_handler_version       = "2.73"
   auto_upgrade_minor_version = true
+  tags                       = local.tags
 
   settings = <<-SETTINGS
     {
