@@ -37,16 +37,14 @@ resource "azurerm_virtual_desktop_host_pool" "default" {
   }
 }
 
-resource "time_static" "default" {
-  triggers = {
-    rotation_days = 29
-  }
+resource "time_rotating" "default" {
+  rotation_days = 1
 }
 
 #Creates the token that will be used by VMs to register to this pool
 resource "azurerm_virtual_desktop_host_pool_registration_info" "default" {
   hostpool_id     = azurerm_virtual_desktop_host_pool.default.id
-  expiration_date = timeadd(time_static.default.rfc3339, "696h")
+  expiration_date = timeadd(time_rotating.default.rfc3339, "24h")
 }
 
 data "azuread_service_principal" "scaling_plan" {
