@@ -44,7 +44,7 @@ Supported Azure services:
 | [azurerm_virtual_desktop_workspace.default](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/virtual_desktop_workspace) | resource |
 | [azurerm_virtual_desktop_workspace_application_group_association.default](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/virtual_desktop_workspace_application_group_association) | resource |
 | [azurerm_virtual_machine_extension.AVDDsc](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/virtual_machine_extension) | resource |
-| [time_static.default](https://registry.terraform.io/providers/hashicorp/time/latest/docs/resources/static) | resource |
+| [time_rotating.default](https://registry.terraform.io/providers/hashicorp/time/latest/docs/resources/rotating) | resource |
 | [azuread_service_principal.scaling_plan](https://registry.terraform.io/providers/hashicorp/azuread/latest/docs/data-sources/service_principal) | data source |
 
 ## Inputs
